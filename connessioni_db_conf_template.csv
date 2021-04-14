@@ -1,0 +1,9 @@
+--
+-- Template to indicate on which db use the tools.
+-- Active = enable/disable the db connection
+-- Number grouping = group togheter the different DB to execute the same script (on our case always CNT , A and/or/only B)
+-- Version Release: release of the product JA
+-- Type of DB JA : CNT /USR or other
+--
+Active;Group;Version;Tablesp_data;Tablesp_index;Type;User;Passwd;hostname;port;service
+<False/True>;<Number grouping>;v<Version_Release>;<tablespace dat>;<tablespace index>;<CNT/USR>;<user>;<passwd>;<hostname>;<port>;<service_db>
