@@ -109,7 +109,7 @@ def message_to_mail_and_patch(directory_working, version_release, commit_last_SV
     report_string1 = 'MAIL to send\n'
     subject_mail = 'New patch for ' + version_release[1:] + ' Version ' + commit_last_SVN + ' - commit <TODO> ' + subject_bug + '\n'
     report_string2 = '\n\nREPORT su patch\n'
-    template_script_mail = 'Hi, a new sql patch is available for db ' + version_release + '\n - svn database branch ' + version_release + '\n - version (' + commit_last_SVN + ') (2 files)\n' + 'I already ran it against wedge and jango ba' + version_release[1:] + '* schemas. \n Thanks'
+    template_script_mail = 'Hi, a new sql patch is available for db ' + version_release + '\n - svn database branch ' + version_release + '\n - version (' + commit_last_SVN + ') (2 files)\n' + 'I already ran it against wedge and jango ba' + version_release[1:-2].replace('.','') + '* schemas. \n Thanks'
     template_script_rep = 'Patch ' + version_release + ' Version ' + commit_last_SVN + '\n Commit <TODO>'
     a_file = open(report_file, "w")
     a_file.writelines(report_string1)

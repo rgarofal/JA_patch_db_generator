@@ -59,15 +59,37 @@ def is_ok_check_version(output_sql):
     return status
 
 
+def count_reference_substr(data, substr):
+    startIndex = 0
+    count = 0
+    for i in range(len(data)):
+        k = data.find(substr, startIndex)
+        if k != -1:
+            startIndex = k + 1
+            count += 1
+            k = 0
+    return count
+
+
+def all_ora_to_excluded(output_sql, list_ora_excl):
+    counter = []
+    for error_ora_id in list_ora_excl:
+        num_ora = count_reference_substr(output_sql, error_ora_id)
+        counter.append(num_ora)
+    return sum(counter)
+
+
 def is_ok_sql_execution(output_sql):
-    #ORA-00955 esiste già non dovrebbe bloccare l'esecuzione
+    # ORA-00955 esiste già non dovrebbe bloccare l'esecuzione
+    list_ora_exc = get_list_ora_error_to_exclude()
     status = False
-    if output_sql.find('Error') == -1:
+    if (output_sql.find('Error starting') == -1) and (output_sql.rfind('Error starting') == -1):
         status = True
     else:
-        # indica che esiste già quindi
-        if output_sql.find('ORA-00955') == -1:
-            print("      WARNING: ORA-00955 - Probably the set has been executed before ")
+        count_errno_err = count_reference_substr(output_sql, 'Error starting')
+        count_errno_ora = all_ora_to_excluded(output_sql, list_ora_exc)
+        if count_errno_err == count_errno_ora:
+            print("      WARNING: " + " / ".join(list_ora_exc[0:]) + " - Probably the set has been executed before ")
             status = True
         else:
             status = False
@@ -164,7 +186,8 @@ def define_algoritm(conf_db, version_release, svn_to_check_before, svn_to_check_
                 conn_conf = [config for config in conf_db if
                              (config['Type'] == 'CNT' and config['Version'] == version_release)]
                 schema_user_cnt = conn_conf[0]['User']
-                print(str(count_step) + " - Execute the script for CNT  = " + script_to_execute + " on schema = " + schema_user_cnt)
+                print(str(
+                    count_step) + " - Execute the script for CNT  = " + script_to_execute + " on schema = " + schema_user_cnt)
                 status_ok = sql_execute_script(conn_conf[0], schema_user_cnt, sql_to_execute)
                 count_step += 1
                 if not status_ok:
@@ -240,6 +263,11 @@ def help_msg():
     help_str = """ TODO
                    """
     return help_str
+
+
+def get_list_ora_error_to_exclude():
+    list_ora_notincluded = ['ORA-00955', 'ORA-00001']
+    return list_ora_notincluded
 
 
 def load_db_conf(group_sel):
