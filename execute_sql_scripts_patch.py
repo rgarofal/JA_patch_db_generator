@@ -121,12 +121,18 @@ def sql_execute_script(conf_db, user_cnt, sql_to_execute):
     sql_script_final = []
     statement_sql = ""
     status_ok = True
+    label_to_ignore = "ONLINESKIP"
     final_commit = "\n\ncommit;\n"
     if conf_db['Type'] == 'CNT':
         for line in sql_to_execute:
             line = line.replace('&&__CNTUSER.', conf_db['User']).replace(
                 '&&__CNTTSIDX.', conf_db['Tablesp_index'])
-            sql_script_final.append(line)
+            line = line.replace('\\__CNTUSER.', conf_db['User']).replace(
+                '\\__CNTTSIDX.', conf_db['Tablesp_index'])
+            if label_to_ignore in line:
+                print("SQL statement to ESCLUDE =  " + line)
+            else:
+                sql_script_final.append(line)
 
         sql_script_final.append(final_commit)
         [print(instr_sql) for instr_sql in sql_script_final]
@@ -135,6 +141,8 @@ def sql_execute_script(conf_db, user_cnt, sql_to_execute):
         for line in sql_to_execute:
             line = line.replace('&&__USRUSER.', conf_db['User']).replace(
                 '&&__USRTSIDX.', conf_db['Tablesp_index']).replace('&&__CNTUSER.', user_cnt)
+            line = line.replace('\\__USRUSER.', conf_db['User']).replace(
+                '\\__USRTSIDX.', conf_db['Tablesp_index']).replace('\\__CNTUSER.', user_cnt)
             sql_script_final.append(line)
         sql_script_final.append(final_commit)
         [print(instr_sql) for instr_sql in sql_script_final]
@@ -266,7 +274,7 @@ def help_msg():
 
 
 def get_list_ora_error_to_exclude():
-    list_ora_notincluded = ['ORA-00955', 'ORA-00001', 'ORA-01430']
+    list_ora_notincluded = ['ORA-00955', 'ORA-00001', 'ORA-01430', 'ORA-01442', 'ORA-02275']
     return list_ora_notincluded
 
 
