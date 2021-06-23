@@ -122,13 +122,14 @@ def sql_execute_script(conf_db, user_cnt, sql_to_execute):
     statement_sql = ""
     status_ok = True
     label_to_ignore = "ONLINESKIP"
+    label_environment = 'DEV'
     final_commit = "\n\ncommit;\n"
     if conf_db['Type'] == 'CNT':
         for line in sql_to_execute:
             line = line.replace('&&__CNTUSER.', conf_db['User']).replace(
-                '&&__CNTTSIDX.', conf_db['Tablesp_index'])
-            line = line.replace('\\__CNTUSER.', conf_db['User']).replace(
-                '\\__CNTTSIDX.', conf_db['Tablesp_index'])
+                '&&__CNTTSIDX.', conf_db['Tablesp_index']).replace('&&__ENV.', label_environment)
+            line = line.replace('\\\__CNTUSER.', conf_db['User']).replace(
+                '\\\__CNTTSIDX.', conf_db['Tablesp_index']).replace('\\\__ENV.', label_environment)
             if label_to_ignore in line:
                 print("SQL statement to ESCLUDE =  " + line)
             else:
@@ -141,8 +142,8 @@ def sql_execute_script(conf_db, user_cnt, sql_to_execute):
         for line in sql_to_execute:
             line = line.replace('&&__USRUSER.', conf_db['User']).replace(
                 '&&__USRTSIDX.', conf_db['Tablesp_index']).replace('&&__CNTUSER.', user_cnt)
-            line = line.replace('\\__USRUSER.', conf_db['User']).replace(
-                '\\__USRTSIDX.', conf_db['Tablesp_index']).replace('\\__CNTUSER.', user_cnt)
+            line = line.replace('\\\__USRUSER.', conf_db['User']).replace(
+                '\\\__USRTSIDX.', conf_db['Tablesp_index']).replace('\\\__CNTUSER.', user_cnt)
             sql_script_final.append(line)
         sql_script_final.append(final_commit)
         [print(instr_sql) for instr_sql in sql_script_final]
@@ -165,7 +166,7 @@ def check_status_sql_execution_sql(output_sql, algorithm_check):
 
 def read_script_sql(dir_branch, filename_script):
     script_file = dir_branch + '\\' + filename_script
-    a_file = open(script_file, "r")
+    a_file = open(script_file, "r", encoding='utf-8', errors='ignore')
     list_of_lines = a_file.readlines()
     a_file.close()
     filter_list = []
@@ -238,8 +239,9 @@ def run_sqlplus(sqlplus_script, sql_conn):
     # print(args)
     p = subprocess.Popen(args=args_sql, stdin=subprocess.PIPE,
                          stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    sql_to_execute = sqlplus_script.encode('utf-8', 'ignore')
     (stdout, stderr) = p.communicate(sqlplus_script.encode('utf-8'))
-    stdout_lines = stdout.decode('utf-8').split("\n")
+    stdout_lines = stdout.decode('utf-8', 'ignore').split("\n")
     print(stdout_lines)
     return stdout_lines
 
