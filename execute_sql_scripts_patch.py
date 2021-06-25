@@ -17,8 +17,8 @@ Works with Python 3 and 2.
 def last2filepath_name(directory_patch):
     paths = sorted(Path(directory_patch).iterdir(), key=os.path.getmtime, reverse=True)
     exist_cntx = [True for file in paths[:3] if (os.path.basename(file).find('cntx') != -1) is True]
-    len(exist_cntx)
     if exist_cntx:
+        print("EXIST the cntx file patch!")
         only2file = [os.path.basename(file) for file in paths[:3]]
     else:
         only2file = [os.path.basename(file) for file in paths[:2]]
@@ -96,13 +96,14 @@ def is_ok_sql_execution(output_sql):
     return status
 
 
-def sql_check_actual_svn_version(version_rel, svn_to_check_before, schema_cnt, conf_db):
+def sql_check_actual_svn_version(version_rel, version_to_check_int, svn_to_check_before, schema_cnt, conf_db):
     cnt_conf = [config for config in conf_db if (config['Type'] == schema_cnt and config['Version'] == version_rel)]
     print(cnt_conf)
     oth_schemas = [config for config in conf_db if (config['Type'] != schema_cnt and config['Version'] == version_rel)]
-    versione_soft = version_rel[1:]
+    # version_soft = version_rel[1:]
+    version_soft = version_to_check_int[1:]
     for oth_sch in oth_schemas:
-        sql_statement = sql_check_svn_version_script(versione_soft, svn_to_check_before, cnt_conf[0]['User'],
+        sql_statement = sql_check_svn_version_script(version_soft, svn_to_check_before, cnt_conf[0]['User'],
                                                      oth_sch['User'])
         sql_connection = sql_string_connection(cnt_conf[0])
         # print(sql_statement)
@@ -176,14 +177,17 @@ def read_script_sql(dir_branch, filename_script):
     return filter_list
 
 
-def define_algoritm(conf_db, version_release, svn_to_check_before, svn_to_check_after, schema_cnt, dir_update,
+def define_algoritm(conf_db, version_release, version_to_check, svn_to_check_before, svn_to_check_after, schema_cnt,
+                    dir_update,
                     script_executing
                     ):
     # 1 phase check the actual version
     # delete the initial v
     count_step = 1
     print(str(count_step) + " - State of check Actual SVN = " + svn_to_check_before)
-    status_ok = sql_check_actual_svn_version(version_release, svn_to_check_before, schema_cnt, conf_db)
+    # status_ok = sql_check_actual_svn_version(version_release, svn_to_check_before, schema_cnt, conf_db)
+    status_ok = sql_check_actual_svn_version(version_release, version_to_check, svn_to_check_before, schema_cnt,
+                                             conf_db)
     print("     State of check Actual SVN = " + str(status_ok))
     count_step += 1
     if status_ok:
@@ -220,7 +224,8 @@ def define_algoritm(conf_db, version_release, svn_to_check_before, svn_to_check_
                         print("     Script OK ")
             # check if all is ok
             print(str(count_step) + " - State of check Last SVN = " + svn_to_check_after)
-            status_ok = sql_check_actual_svn_version(version_release, svn_to_check_after, schema_cnt, conf_db)
+            # status_ok = sql_check_actual_svn_version(version_release, svn_to_check_after, schema_cnt, conf_db)
+            status_ok = sql_check_actual_svn_version(version_release, version_to_check, svn_to_check_after, schema_cnt, conf_db)
             print("     State of check Last SVN = " + str(status_ok))
     else:
         print("WARNING the start SVN is not correct with the last in update patch")
@@ -258,10 +263,34 @@ def extract_last_num_patch(last_patch_filename):
     return last_svn_i[0]
 
 
-def get_pre_last_svn_script_file(dir_branch):
-    last_2_patch_filenames = last2filepath_name(dir_branch)
-    last_usr_filename = [f for f in last_2_patch_filenames if f.find("usr") != -1]
-    last_cnt_filename = [f for f in last_2_patch_filenames if f.find("cnt") != -1 if f.find("cntx") == -1]
+# to manage the selection of specific patch files
+def searchSVN2filepath_name(directory_patch, svn_last_id):
+    paths = sorted(Path(directory_patch).iterdir(), key=os.path.getmtime, reverse=True)
+    lista_patch_filenames = [file for file in paths if (os.path.basename(file).find(svn_last_id + '_') != -1) is True]
+    return lista_patch_filenames
+
+
+# old code
+# def get_pre_last_svn_script_file(dir_branch):
+#     last_2_patch_filenames = last2filepath_name(dir_branch)
+#     last_usr_filename = [f for f in last_2_patch_filenames if f.find("usr") != -1]
+#     last_cnt_filename = [f for f in last_2_patch_filenames if f.find("cnt") != -1 if f.find("cntx") == -1]
+#     # extract the to version from filename
+#     last_svn = extract_last_num_patch(last_usr_filename[0])
+#     pre_svn = extract_prev_num_patch(last_usr_filename[0])
+#     return pre_svn, last_svn, last_2_patch_filenames
+
+def get_pre_last_svn_script_file(dir_branch, svn_last_id):
+    if svn_last_id != -1:
+        # last_2_patch_filenames = searchSVN2filepath_name(dir_branch, svn_last_id)
+        last_2_patch_filenames = [os.path.basename(f) for f in searchSVN2filepath_name(dir_branch, svn_last_id)]
+        last_usr_filename = last_2_patch_filenames
+    else:
+        # probabilmente è da eliminare
+        last_2_patch_filenames = last2filepath_name(dir_branch)
+        last_usr_filename = [f for f in last_2_patch_filenames if f.find("usr") != -1]
+
+    # (TODO) da eliminare last_cnt_filename = [f for f in last_2_patch_filenames if f.find("cnt") != -1 if f.find("cntx") == -1]
     # extract the to version from filename
     last_svn = extract_last_num_patch(last_usr_filename[0])
     pre_svn = extract_prev_num_patch(last_usr_filename[0])
@@ -332,6 +361,10 @@ if __name__ == '__main__':
                         default='v21.1.0',
                         help='version branch',
                         required=False)
+    parser.add_argument('-vu', '--version_to_update',
+                        default='',
+                        help='version to update - in general is the same as version branch',
+                        required=False)
     parser.add_argument('-c', '--commit_id',
                         default='',
                         help='SVN number of commit',
@@ -350,6 +383,11 @@ if __name__ == '__main__':
                         required=False)
     args = parser.parse_args()
     version_branch = args.version
+    # version to which the patch is releated (it is possible apply on a specific version_branch
+    # a patch on a previous version . e.g On 21.3 can apply all the missing patch of 12.2 or earlier version
+    version_to_check = args.version_to_update
+    if not version_to_check:
+        version_to_check = version_branch
     commit_last_SVN = args.commit_id
     base_dir = args.directory_svn
     id_baco = args.identificativo_bug  # JASS or altro
@@ -367,8 +405,8 @@ if __name__ == '__main__':
     # read the database configuration files
 
     # read script file cnt and usr
-    pre_svn, last_svn, script_filenames = get_pre_last_svn_script_file(dir_branch_complete)
+    pre_svn, last_svn, script_filenames = get_pre_last_svn_script_file(dir_branch_complete, commit_last_SVN)
     # print("Pre svn = " + pre_svn + " Last SVN = " + last_svn)
     [print(file) for file in script_filenames]
     script_filenames = reorder_scripts_execution(script_filenames)
-    define_algoritm(list_of_conf_db, version_branch, pre_svn, last_svn, 'CNT', dir_branch_complete, script_filenames)
+    define_algoritm(list_of_conf_db, version_branch, version_to_check, pre_svn, last_svn, 'CNT', dir_branch_complete, script_filenames)
