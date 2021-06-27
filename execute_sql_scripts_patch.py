@@ -305,7 +305,7 @@ def help_msg():
 
 
 def get_list_ora_error_to_exclude():
-    list_ora_notincluded = ['ORA-00955', 'ORA-00001', 'ORA-01430', 'ORA-01442', 'ORA-02275']
+    list_ora_notincluded = ['ORA-00955', 'ORA-00001', 'ORA-01430', 'ORA-01442', 'ORA-02275', 'ORA-02260', 'ORA-02264']
     return list_ora_notincluded
 
 
