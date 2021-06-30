@@ -142,9 +142,9 @@ def sql_execute_script(conf_db, user_cnt, sql_to_execute):
     else:
         for line in sql_to_execute:
             line = line.replace('&&__USRUSER.', conf_db['User']).replace(
-                '&&__USRTSIDX.', conf_db['Tablesp_index']).replace('&&__CNTUSER.', user_cnt)
+                '&&__USRTSIDX.', conf_db['Tablesp_index']).replace('&&__CNTUSER.', user_cnt).replace('&&__ENV.', label_environment)
             line = line.replace('\\\__USRUSER.', conf_db['User']).replace(
-                '\\\__USRTSIDX.', conf_db['Tablesp_index']).replace('\\\__CNTUSER.', user_cnt)
+                '\\\__USRTSIDX.', conf_db['Tablesp_index']).replace('\\\__CNTUSER.', user_cnt).replace('\\\__ENV.', label_environment)
             sql_script_final.append(line)
         sql_script_final.append(final_commit)
         [print(instr_sql) for instr_sql in sql_script_final]
