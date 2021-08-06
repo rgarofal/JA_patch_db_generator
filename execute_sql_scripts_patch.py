@@ -131,6 +131,7 @@ def sql_execute_script(conf_db, user_cnt, sql_to_execute):
                 '&&__CNTTSIDX.', conf_db['Tablesp_index']).replace('&&__ENV.', label_environment)
             line = line.replace('\\\__CNTUSER.', conf_db['User']).replace(
                 '\\\__CNTTSIDX.', conf_db['Tablesp_index']).replace('\\\__ENV.', label_environment)
+            line = line.replace('&&__CNTUSER', conf_db['User'])
             if label_to_ignore in line:
                 print("SQL statement to ESCLUDE =  " + line)
             else:
@@ -145,6 +146,7 @@ def sql_execute_script(conf_db, user_cnt, sql_to_execute):
                 '&&__USRTSIDX.', conf_db['Tablesp_index']).replace('&&__CNTUSER.', user_cnt).replace('&&__ENV.', label_environment)
             line = line.replace('\\\__USRUSER.', conf_db['User']).replace(
                 '\\\__USRTSIDX.', conf_db['Tablesp_index']).replace('\\\__CNTUSER.', user_cnt).replace('\\\__ENV.', label_environment)
+            line = line.replace('&&__USRUSER', conf_db['User'])
             sql_script_final.append(line)
         sql_script_final.append(final_commit)
         [print(instr_sql) for instr_sql in sql_script_final]
