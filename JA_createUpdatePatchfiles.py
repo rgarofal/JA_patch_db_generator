@@ -16,11 +16,22 @@ def parse_file_patch(file_name):
     # test = updateDbFrom142551to142552_usr
 
 
-def last2filepath_name(directory_patch):
+# to manage the selection of specific patch files
+def searchSVN2filepath_name(directory_patch, svn_last_id):
+    paths = sorted(Path(directory_patch).iterdir(), key=os.path.getmtime, reverse=True)
+    lista_patch_filenames = [file for file in paths if (os.path.basename(file).find(svn_last_id + '_') != -1) is True]
+    return lista_patch_filenames
+
+
+def last2filepath_name(directory_patch, from_version_id):
     # paths = sorted(Path(directory_patch).iterdir(), key=os.path.getmtime, reverse=True)
     # only2file = [os.path.basename(file) for file in paths[:3]]
     # return only2file
-    paths = sorted(Path(directory_patch).iterdir(), key=os.path.getmtime, reverse=True)
+    if from_version_id != -1:
+        paths = searchSVN2filepath_name(directory_patch, from_version_id)
+    else:
+        paths = sorted(Path(directory_patch).iterdir(), key=os.path.getmtime, reverse=True)
+
     exist_cntx = [True for file in paths[:3] if (os.path.basename(file).find('cntx') != -1) is True]
     len(exist_cntx)
     if exist_cntx:
@@ -107,9 +118,12 @@ def message_to_mail_and_patch(directory_working, version_release, commit_last_SV
     report_file = directory_working + '\\' + report_file
     print("Created the template file to write MAIL anc ClosureComment on file = " + report_file)
     report_string1 = 'MAIL to send\n'
-    subject_mail = 'New patch for ' + version_release[1:] + ' Version ' + commit_last_SVN + ' - commit <TODO> ' + subject_bug + '\n'
+    subject_mail = 'New patch for ' + version_release[
+                                      1:] + ' Version ' + commit_last_SVN + ' - commit <TODO> ' + subject_bug + '\n'
     report_string2 = '\n\nREPORT su patch\n'
-    template_script_mail = 'Hi, a new sql patch is available for db ' + version_release + '\n - svn database branch ' + version_release + '\n - version (' + commit_last_SVN + ') (2 files)\n' + 'I already ran it against wedge and jango ba' + version_release[1:-2].replace('.','') + '* schemas. \n Thanks'
+    template_script_mail = 'Hi, a new sql patch is available for db ' + version_release + '\n - svn database branch ' + version_release + '\n - version (' + commit_last_SVN + ') (2 files)\n' + 'I already ran it against wedge and jango ba' + version_release[
+                                                                                                                                                                                                                                                 1:-2].replace(
+        '.', '') + '* schemas. \n Thanks'
     template_script_rep = 'Patch ' + version_release + ' Version ' + commit_last_SVN + '\n Commit <TODO>'
     a_file = open(report_file, "w")
     a_file.writelines(report_string1)
@@ -145,6 +159,10 @@ if __name__ == '__main__':
                         default='',
                         help='SVN number of commit',
                         required=True)
+    parser.add_argument('-ic', '--from_commit_id',
+                        default='',
+                        help='From a specific SVN number of commit',
+                        required=True)
     parser.add_argument('-i', '--identificativo_bug',
                         default='',
                         help='identifier and description bugs',
@@ -168,12 +186,19 @@ if __name__ == '__main__':
     init_conf_dir = '03-InitConf'
     dir_model_complete = base_dir + '\\' + model_dir + init_conf_dir + '\\'
     dir_branch_complete = base_dir + '\\' + update_dir + version_branch
+    print("FROM a specific SVN commit")
+    from_version_patch = args.from_commit_id
+    if not from_version_patch:
+        print("No from a specific SVN commit")
+        from_version_patch = -1
+    else:
+        print("Specified from SVN commit id = " + from_version_patch)
     print("Directory SVN model init  DB = ", dir_model_complete)
     change_version_init_tab(dir_model_complete, 'CNT', commit_last_SVN, version_branch)
     change_version_init_tab(dir_model_complete, 'USR', commit_last_SVN, version_branch)
     print("Directory SVN patch DB = ", dir_branch_complete)
     # extract the last two name of patch files
-    last_2_patch_filenames = last2filepath_name(dir_branch_complete)
+    last_2_patch_filenames = last2filepath_name(dir_branch_complete, from_version_patch)
     last_usr_filename = [f for f in last_2_patch_filenames if f.find("usr") != -1]
     last_cnt_filename = [f for f in last_2_patch_filenames if f.find("cnt") != -1 if f.find("cntx") == -1]
     # extract the to version from filename
