@@ -162,7 +162,7 @@ if __name__ == '__main__':
     parser.add_argument('-ic', '--from_commit_id',
                         default='',
                         help='From a specific SVN number of commit',
-                        required=True)
+                        required=False)
     parser.add_argument('-i', '--identificativo_bug',
                         default='',
                         help='identifier and description bugs',
