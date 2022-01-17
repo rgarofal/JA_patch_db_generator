@@ -28,14 +28,38 @@ def last2filepath_name(directory_patch):
 # check to perform on CNT schema
 # create the sql statement for each USR schemas to check
 def sql_check_svn_version_script(version_release, svn_to_check, schema_cnt, other_schema):
+    # sql_script = """
+    #
+    # select case when count(*) = 0 then 'OK' else 'KO' end check_version from (
+    # select DB_SCHEMA_VERSION  from &&__USRUSER..T_FND_USR_VERSION where VERSION = &&VERS_REL and DB_SCHEMA_VERSION = &&SVN_CHECK
+    # minus
+    # select DB_SCHEMA_VERSION  from &&__CNTUSER..T_FND_CNT_VERSION where VERSION = &&VERS_REL and DB_SCHEMA_VERSION = &&SVN_CHECK ) T;
+    #
+    # """
+
     sql_script = """
-    
-    select case when count(*) = 0 then 'OK' else 'KO' end check_version from (
-    select DB_SCHEMA_VERSION  from &&__USRUSER..T_FND_USR_VERSION where VERSION = &&VERS_REL and DB_SCHEMA_VERSION = &&SVN_CHECK
-    minus
-    select DB_SCHEMA_VERSION  from &&__CNTUSER..T_FND_CNT_VERSION where VERSION = &&VERS_REL and DB_SCHEMA_VERSION = &&SVN_CHECK ) T;
-    
+
+                select case when F = 1 then 'OK' else 'KO' end check_version from (
+                select count(*) as F from (select USR_V.DB_SCHEMA_VERSION from &&__USRUSER..T_FND_USR_VERSION USR_V join &&__CNTUSER..T_FND_CNT_VERSION CNT_V  on USR_V.DB_SCHEMA_VERSION = CNT_V.DB_SCHEMA_VERSION and USR_V.VERSION = CNT_V.VERSION
+                where USR_V.VERSION = &&VERS_REL and CNT_V.DB_SCHEMA_VERSION = &&SVN_CHECK));
+
     """
+    if test_configuration:
+        # sql_script = """
+        #
+        #     select case when count(*) = 0 then 'OK' else 'KO' end check_version from (
+        #     select DB_SCHEMA_VERSION  from &&__USRUSER..T_FND_USR_VERSION_RG where VERSION = &&VERS_REL and DB_SCHEMA_VERSION = &&SVN_CHECK
+        #     minus
+        #     select DB_SCHEMA_VERSION  from &&__CNTUSER..T_FND_CNT_VERSION_RG where VERSION = &&VERS_REL and DB_SCHEMA_VERSION = &&SVN_CHECK ) T;
+        #
+        #     """
+        sql_script = """
+
+            select case when F = 1 then 'OK' else 'KO' end check_version from (
+            select count(*) as F from (select USR_V.DB_SCHEMA_VERSION from &&__USRUSER..T_FND_USR_VERSION_RG USR_V join &&__CNTUSER..T_FND_CNT_VERSION_RG CNT_V  on USR_V.DB_SCHEMA_VERSION = CNT_V.DB_SCHEMA_VERSION and USR_V.VERSION = CNT_V.VERSION
+            where USR_V.VERSION = &&VERS_REL and CNT_V.DB_SCHEMA_VERSION = &&SVN_CHECK));
+
+            """
     sql_script_check = sql_script.replace('&&__USRUSER.', other_schema).replace('&&__CNTUSER.', schema_cnt).replace(
         '&&VERS_REL', '\'' + version_release + '\'').replace('&&SVN_CHECK', '\'' + svn_to_check + '\'')
     return sql_script_check
@@ -307,7 +331,7 @@ def help_msg():
 
 
 def get_list_ora_error_to_exclude():
-    list_ora_notincluded = ['ORA-00955', 'ORA-00001', 'ORA-01430', 'ORA-01442', 'ORA-02275', 'ORA-02260', 'ORA-02264', 'ORA-02443']
+    list_ora_notincluded = ['ORA-00955', 'ORA-00001', 'ORA-01430', 'ORA-01442', 'ORA-02275', 'ORA-02260', 'ORA-02261', 'ORA-02264', 'ORA-02443']
     return list_ora_notincluded
 
 
@@ -362,7 +386,7 @@ if __name__ == '__main__':
     parser.add_argument('-v', '--version',
                         default='v21.1.0',
                         help='version branch',
-                        required=False)
+                        required=True)
     parser.add_argument('-vu', '--version_to_update',
                         default='',
                         help='version to update - in general is the same as version branch',
@@ -383,6 +407,10 @@ if __name__ == '__main__':
                         default='1',
                         help='group id database to check',
                         required=False)
+    parser.add_argument('-t', '--test',
+                        default=False,
+                        help='sub directory where store the log of patches',
+                        required=False)
     args = parser.parse_args()
     version_branch = args.version
     # version to which the patch is releated (it is possible apply on a specific version_branch
@@ -399,6 +427,13 @@ if __name__ == '__main__':
     repository_work_dir = args.repository_dir
     dir_branch_complete = base_dir + update_dir + version_branch
     config_db = repository_work_dir + '\\' + 'configurazione_tool_DB_patch\\' + config_conn_db_file_name
+
+    test_configuration = args.test
+    if test_configuration:
+        print("######################  START EXECUTION TEST #################################")
+    else:
+        print("######################  START EXECUTION #################################")
+
     group_selected = args.group_id
     print("Group selected = " + group_selected)
     # read the database connection configurazione files
