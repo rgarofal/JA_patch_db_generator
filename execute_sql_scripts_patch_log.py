@@ -127,6 +127,7 @@ def is_ok_sql_execution(output_sql):
 def sql_check_actual_svn_version(version_rel, version_to_check_int, svn_to_check_before, schema_cnt, conf_db):
     cnt_conf = [config for config in conf_db if (config['Type'] == schema_cnt and config['Version'] == version_rel)]
     # LOG DA CANCELLARE print(cnt_conf)
+    status_ok = False
     logger.info(cnt_conf)
     oth_schemas = [config for config in conf_db if (config['Type'] != schema_cnt and config['Version'] == version_rel)]
     # version_soft = version_rel[1:]
