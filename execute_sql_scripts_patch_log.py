@@ -163,7 +163,8 @@ def sql_execute_script(conf_db, user_cnt, sql_to_execute):
                 '\\\__CNTTSIDX.', conf_db['Tablesp_index']).replace('\\\__ENV.', label_environment)
             line = line.replace('&&__CNTUSER', conf_db['User'])
             if label_to_ignore in line:
-                print("SQL statement to ESCLUDE =  " + line)
+                # LOG DA CANCELLARE print ("SQL statement to ESCLUDE =  " + line)
+                logger.warning("SQL statement to ESCLUDE =  " + line)
             else:
                 sql_script_final.append(line)
 
@@ -429,7 +430,7 @@ if __name__ == '__main__':
                         default='C:\\Users\\u958garofalo\\SVN',
                         help='Directory dove risiedono SVN per il DB  ', required=False)
     parser.add_argument('-v', '--version',
-                        default='v21.1.0',
+                        default='',
                         help='version branch',
                         required=True)
     parser.add_argument('-vu', '--version_to_update',
