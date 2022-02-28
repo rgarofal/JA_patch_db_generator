@@ -125,11 +125,13 @@ def is_ok_sql_execution(output_sql):
 
 
 def sql_check_actual_svn_version(version_rel, version_to_check_int, svn_to_check_before, schema_cnt, conf_db):
-    cnt_conf = [config for config in conf_db if (config['Type'] == schema_cnt and config['Version'] == version_rel)]
+    # PROVA cnt_conf = [config for config in conf_db if (config['Type'] == schema_cnt and config['Version'] == version_rel)]
+    cnt_conf = [config for config in conf_db if (config['Type'] == schema_cnt)]
     # LOG DA CANCELLARE print(cnt_conf)
     status_ok = False
     logger.info(cnt_conf)
-    oth_schemas = [config for config in conf_db if (config['Type'] != schema_cnt and config['Version'] == version_rel)]
+    # PROVA oth_schemas = [config for config in conf_db if (config['Type'] != schema_cnt and config['Version'] == version_rel)]
+    oth_schemas = [config for config in conf_db if (config['Type'] != schema_cnt)]
     # version_soft = version_rel[1:]
     version_soft = version_to_check_int[1:]
     for oth_sch in oth_schemas:
@@ -236,8 +238,9 @@ def define_algoritm(conf_db, version_release, version_to_check, svn_to_check_bef
             sql_to_execute = read_script_sql(dir_update, script_to_execute)
             if script_to_execute.find('cnt') != -1:
                 # script on CNT
-                conn_conf = [config for config in conf_db if
-                             (config['Type'] == 'CNT' and config['Version'] == version_release)]
+                # PROVA conn_conf = [config for config in conf_db if
+                #             (config['Type'] == 'CNT' and config['Version'] == version_release)]
+                conn_conf = [config for config in conf_db if(config['Type'] == 'CNT')]
                 schema_user_cnt = conn_conf[0]['User']
                 # LOG DA CANCELLARE
                 # print(str(
@@ -260,14 +263,21 @@ def define_algoritm(conf_db, version_release, version_to_check, svn_to_check_bef
                 #
                 if script_to_execute.find('cntx') != -1:
                     # script CNTX
-                    conn_conf_usr = [config for config in conf_db if
-                                     (config['Type'] == 'USR' and config['Version'] == version_release)]
-                    conn_conf_head = [config for config in conf_db if
-                                      (config['Type'] == 'CNT' and config['Version'] == version_release)]
+                    # PROVA
+                    # conn_conf_usr = [config for config in conf_db if
+                    #                  (config['Type'] == 'USR' and config['Version'] == version_release)]
+                    # conn_conf_head = [config for config in conf_db if
+                    #                   (config['Type'] == 'CNT' and config['Version'] == version_release)]
+
+                    conn_conf_usr = [config for config in conf_db if (config['Type'] == 'USR')]
+                    conn_conf_head = [config for config in conf_db if (config['Type'] == 'CNT')]
                 else:
                     # script USRs
-                    conn_conf = [config for config in conf_db if
-                                 (config['Type'] == 'USR' and config['Version'] == version_release)]
+                    # PROVA
+                    # conn_conf = [config for config in conf_db if
+                    #              (config['Type'] == 'USR' and config['Version'] == version_release)]
+
+                    conn_conf = [config for config in conf_db if (config['Type'] == 'USR')]
                     for conn_conf_s in conn_conf:
                         # LOG DA CANCELLARE
                         # print(str(count_step) + " - Execute the script for USR  = " + script_to_execute +
