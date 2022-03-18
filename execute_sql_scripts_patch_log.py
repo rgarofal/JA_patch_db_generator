@@ -184,8 +184,12 @@ def sql_execute_script(conf_db, user_cnt, sql_to_execute):
                 '\\\__USRTSIDX.', conf_db['Tablesp_index']).replace('\\\__CNTUSER.', user_cnt).replace('\\\__ENV.',
                                                                                                        label_environment)
             line = line.replace('&&__USRUSER', conf_db['User'])
-            sql_script_final.append(line)
-        sql_script_final.append(final_commit)
+            if label_to_ignore in line:
+                # LOG DA CANCELLARE print ("SQL statement to ESCLUDE =  " + line)
+                logger.warning("SQL statement to ESCLUDE =  " + line)
+            else:
+                sql_script_final.append(line)
+
         # LOG DA CANCELLARE [print(instr_sql) for instr_sql in sql_script_final]
         [logger.info(instr_sql) for instr_sql in sql_script_final]
         statement_sql = "".join(sql_script_final[0:])
@@ -386,7 +390,7 @@ def help_msg():
 
 def get_list_ora_error_to_exclude():
     list_ora_notincluded = ['ORA-00955', 'ORA-00001', 'ORA-01430', 'ORA-01442', 'ORA-02275', 'ORA-02260', 'ORA-02261',
-                            'ORA-02264', 'ORA-02443']
+                            'ORA-02264', 'ORA-02443', 'ORA-01451']
     return list_ora_notincluded
 
 
