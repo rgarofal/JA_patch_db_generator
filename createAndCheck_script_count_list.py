@@ -176,7 +176,17 @@ def read_script_sql(dir_branch, filename_script):
             filter_list.append(line)
     return filter_list
 
-
+#
+# Il file è lista_tabelle_to_check_<ID_connessione_SchemaA>_to_<ID_connessione_SchemaA>.csv
+#    directory: ...Test_DBTOOL\\file_csv
+#    esempio: lista_tabelle_to_check_221D_to_222D.csv
+# La struttura: TABLE_NAME(colonna) <tab1>....
+#
+# Crea il file : select_count_tables_<ID_connessione_SchemaA>_to_<ID_connessione_SchemaA>.sql
+#    directory: ...Test_DBTOOL\\output_script
+#    esempio: select_count_tables_221D_to_222D.sql
+#    directory:
+#
 def lettura_file_configurazione_tabelle(file_configurazione):
     sql_script = []
 
@@ -186,7 +196,7 @@ def lettura_file_configurazione_tabelle(file_configurazione):
         line_count = 0
         for row in csv_reader:
             if line_count == 0:
-                logger.info(f'Column names are {", ".join(row)}')
+                #logger.info(f'Column names are {", ".join(row)}')
                 line_count += 1
             else:
                 table_name = row["TABLE_NAME"]
