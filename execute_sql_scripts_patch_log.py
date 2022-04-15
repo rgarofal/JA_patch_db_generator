@@ -189,7 +189,7 @@ def sql_execute_script(conf_db, user_cnt, sql_to_execute):
                 logger.warning("SQL statement to ESCLUDE =  " + line)
             else:
                 sql_script_final.append(line)
-
+        sql_script_final.append(final_commit)
         # LOG DA CANCELLARE [print(instr_sql) for instr_sql in sql_script_final]
         [logger.info(instr_sql) for instr_sql in sql_script_final]
         statement_sql = "".join(sql_script_final[0:])
