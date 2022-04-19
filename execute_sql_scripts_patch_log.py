@@ -109,7 +109,9 @@ def is_ok_sql_execution(output_sql):
     # ORA-00955 esiste già non dovrebbe bloccare l'esecuzione
     list_ora_exc = get_list_ora_error_to_exclude()
     status = False
-    if (output_sql.find('Error starting') == -1) and (output_sql.rfind('Error starting') == -1):
+
+    if ((output_sql.find('Error starting') == -1) and (output_sql.rfind('Error starting') == -1) and
+        (output_sql.find('Substitution cancelled') == -1) and (output_sql.rfind('Substitution cancelled') == -1)):
         status = True
     else:
         count_errno_err = count_reference_substr(output_sql, 'Error starting')
