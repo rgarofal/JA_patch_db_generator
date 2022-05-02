@@ -9,10 +9,11 @@ import os
 from pathlib import Path
 from datetime import date
 import logging
+import shutil
 
 header_file = '06-psd_view'
 file_name_target = '05-mv_view-rfx_biz_WORK.sql'
-file_name_target_final = '05-mv_view-rfx_biz.sql'
+file_name_target_final = '07-mv_view-dpl_biz.sql'
 
 
 # test = 06-psd_view-0_biz
@@ -33,24 +34,41 @@ def create_new_PipelinePSD(list_of_lines, file_PSD_to_read):
     template_psd_sign_s = '*### PSD ###*'
     template_code_to_exclude_start = 'JOIN FX '
     template_code_to_exclude_2_start = 'JOIN &&__BIZUSER..FX'
-    template_and_to_delete = "AND (FX_ACCOUNT_ID IS NULL OR FX_ACCOUNT_ID = SAV.BUYER_ORGANIZATION_ID) AND (FX_ACCOUNT_ID_LIST IS NULL OR (INSTR(FX_ACCOUNT_ID_LIST,' | ' || SAV.BUYER_ORGANIZATION_ID || ' | ') > 0))"
-    template_where_to_delete = "WHERE (FX_ACCOUNT_ID IS NULL OR FX_ACCOUNT_ID = BUYER_ORGANIZATION_ID)	AND (FX_ACCOUNT_ID_LIST IS NULL OR (INSTR(FX_ACCOUNT_ID_LIST,' | ' || BUYER_ORGANIZATION_ID || ' | ') > 0))"
+    # template_and_to_delete = "AND (FX_ACCOUNT_ID IS NULL OR FX_ACCOUNT_ID = SAV.BUYER_ORGANIZATION_ID) AND (FX_ACCOUNT_ID_LIST IS NULL OR (INSTR(FX_ACCOUNT_ID_LIST,' | ' || SAV.BUYER_ORGANIZATION_ID || ' | ') > 0))"
+    # template_where_to_delete = "WHERE (FX_ACCOUNT_ID IS NULL OR FX_ACCOUNT_ID = BUYER_ORGANIZATION_ID)	AND (FX_ACCOUNT_ID_LIST IS NULL OR (INSTR(FX_ACCOUNT_ID_LIST,' | ' || BUYER_ORGANIZATION_ID || ' | ') > 0))"
     template_and_to_delete_simple = "AND (FX_ACCOUNT_ID IS NULL OR FX_ACCOUNT_ID "
     template_and_to_delete_test_simple = template_and_to_delete_simple.strip().replace("\t", "").replace(" ", "")
     template_where_to_delete_simple = "WHERE (FX_ACCOUNT_ID IS NULL OR FX_ACCOUNT_ID "
     template_where_to_delete_test_simple = template_where_to_delete_simple.strip().replace("\t", "").replace(" ", "")
     changed_list_of_lines = []
-    changed_list_of_lines.append('-- working on filename = ' + file_PSD_to_read + '\n')
+    changed_list_of_lines.append('\n' + '-- working on filename = ' + file_PSD_to_read + '\n')
     new_view = ''
     old_view = ''
+    old_view_column = ''
+    old_view_column_comment = ''
     for line in list_of_lines:
         if line.find(template_search_head_view) != -1:
             # treat the new name of the view
             token = line.split('"')
             old_view = token[3]
             new_view = token[3] + '_'
-            new_view_create = token[0] + '"' + token[1] + '"' + token[2] + '"' + token[3] + '_' + '"' + token[4]
-            logger.info("CREATING NEW PSD VIEW DP " + token[3] + '_' + ' from view = ' + token[3])
+            old_view_column = token[3] + ','
+            #old_view_comment = "\"&&__BIZUSER.\".\""+"\""+old_view+"\""
+            #new_view_comment =  "\"&&__BIZUSER.\".\""+"\""+new_view+"\""
+            if len(new_view) > 30:
+                logger.warning(
+                    "WARNING NEW PSD VIEW DP " + new_view + ' from view = ' + old_view + ' EXCEED the 30 char len = ' + str(
+                        len(new_view)) + ' will be shortened')
+                old_view_ch = old_view[:29]
+                new_view = old_view_ch + '_'
+
+            new_view_create = token[0] + '"' + token[1] + '"' + token[2] + '"' + new_view + '"' + token[4]
+            if len(new_view) > 30:
+                logger.warning(
+                    "CREATING NEW PSD VIEW DP " + new_view + ' from view = ' + old_view + ' EXCEED the 30 char len = ' + str(
+                        len(new_view)))
+            else:
+                logger.info("CREATING NEW PSD VIEW DP " + new_view + ' from view = ' + old_view)
             changed_list_of_lines.append(new_view_create)
         else:
             # if (template_code_to_exclude_start not in line) and (template_and_to_delete not in line) and (
@@ -62,16 +80,14 @@ def create_new_PipelinePSD(list_of_lines, file_PSD_to_read):
                 line = line.replace(template_psd_sign, '')
                 line = line.replace(template_psd_sign_s, '')
                 sub = r'\b%s\b' % re.escape(old_view)
-                line = re.sub(sub, new_view, line)
+                if line_test.find(old_view_column.strip().replace("\t", "").replace(" ", "")) == -1:
+                        line = re.sub(sub, new_view, line, count=1)
                 # line = line.replace(old_view, new_view)
                 changed_list_of_lines.append(line)
     return changed_list_of_lines
 
 
-def compile_PSD_pipeline_working(file_name_complete_working, list_filenames_PSD_to_read, dir_branch_complete,
-                                 file_name_complete_target):
-    logger.info(
-        "Create all the new PSD file working  = " + file_name_complete_working + " the target finale file is = " + file_name_complete_target)
+def copy_history(file_name_complete_target):
     # read the header historical
     template_start = '-- START HISTORY'
     template_end = '-- END HISTORY'
@@ -90,10 +106,17 @@ def compile_PSD_pipeline_working(file_name_complete_working, list_filenames_PSD_
             else:
                 list_lines_history.append(line)
                 break
+    return list_lines_history
+
+
+def compile_PSD_pipeline_working(file_name_complete_working, list_filenames_PSD_to_read, dir_branch_complete,
+                                 file_name_complete_target):
+    logger.info(
+        "Create all the new PSD file working  = " + file_name_complete_working + " the target finale file is = "
+        + file_name_complete_target)
     # open file target in write mode
     w_file = open(file_name_complete_working, "w", encoding="utf-8")
     w_file.write("-- File autogenerated by script \n\n")
-    w_file.writelines(list_lines_history)
     for file_PSD_to_read in list_filenames_PSD_to_read:
         # the psd with the generic PSD view has to be excluded by analysis
         file_name = os.path.basename(file_PSD_to_read)
@@ -106,6 +129,10 @@ def compile_PSD_pipeline_working(file_name_complete_working, list_filenames_PSD_
             list_of_lines_mod = create_new_PipelinePSD(list_of_lines, file_name)
             w_file.writelines(list_of_lines_mod)
     w_file.close()
+    # release the definitive script file
+    newPath = shutil.copy(file_name_complete_working, file_name_complete_target)
+    logger.info(
+        "Released the final file = " + file_name_complete_target + "  from working copy = " + file_name_complete_working)
 
 
 def help_msg():
@@ -117,7 +144,6 @@ def help_msg():
     return help_str
 
 
-# Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     print('Script to generate all PSD view for DataPipeline')
     parser = argparse.ArgumentParser(description=help_msg())
@@ -161,7 +187,6 @@ if __name__ == '__main__':
     FORMAT = '%(asctime)s %(message)s'
     logging.basicConfig(level=logging.DEBUG, format=FORMAT, encoding='utf-8',
                         handlers=[logging.FileHandler(log_file_complete), logging.StreamHandler()])
-    # esempio dizionario con informazioni aggiuntive d = {'clientip': '192.168.0.1', 'user': 'fbloggs'}
     logger = logging.getLogger('exec_psd_dp_log')
 
     logger.info("Directory SVN PSD to read = " + dir_branch_complete)
