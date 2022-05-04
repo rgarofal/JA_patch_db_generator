@@ -3,8 +3,8 @@ import csv
 from string import Template
 
 # Template common SQL statement
-comment_table_template = Template('COMMENT ON TABLE "&&__BIZUSER."."$table" IS ''$comment_table'';')
-comment_column_template = Template('COMMENT ON COLUMN "&&__BIZUSER."."$table"."$column_name" IS ''$comment_table'';')
+comment_table_template = Template('COMMENT ON TABLE "&&__BIZUSER."."$table" IS ''$comment_table'';\n')
+comment_column_template = Template('COMMENT ON COLUMN "&&__BIZUSER."."$table"."$column_name" IS ''$comment_column'';\n')
 create_psd_view_instance_template = Template('\tJOIN FX on ($source_col = FX_SOURCE_ID)\t')
 # ATTENZIONE per l'ACCOUNT aggiungere la colonna alla BV =>  CTM_STRATEGY.ACCOUNT_ID                   AS BUYER_ORGANIZATION_ID
 create_psd_view_account_template = Template(
@@ -14,9 +14,9 @@ create_psd_view_division_template = Template(
     '\tAND (FX_DIVISION_OID IS NULL OR (INSTR(FX_DIVISION_OID,''|'' || PROJECT_DIVISION || ''|'') > 0))')
 
 create_psd_view_template = Template(
-    'CREATE OR REPLACE VIEW "&&__BIZUSER."."$psd_view_name" AS $select_body \tFROM\t $mv_view_name $join_instance \tWHERE $cond_where\t $cond_account\t;\t')
+    'CREATE OR REPLACE VIEW "&&__BIZUSER."."$psd_view_name" AS $select_body \t\nFROM\t $mv_view_name $join_instance WHERE $cond_account $cond_division;\t')
 create_mat_view_template = Template(
-    'CREATE MATERIALIZED VIEW "&&__BIZUSER."."$mv_view_name" BUILD DEFERRED AS\tSELECT * FROM "&&__BIZUSER."."$bv_view_name"&&__OLTP_DBLINK.\t;\t')
+    'CREATE MATERIALIZED VIEW "&&__BIZUSER."."$mv_view_name" BUILD DEFERRED AS\tSELECT * FROM "&&__BIZUSER."."$bv_view_name"&&__OLTP_DBLINK.;\t')
 alter_mat_view_template = Template('ALTER MATERIALIZED VIEW "&&__BIZUSER."."$mv_view_name" COMPILE;')
 create_index_template = Template(
     'CREATE INDEX "&&__BIZUSER."."$name_of_index" ON "&&__BIZUSER."."$mv_view_name" ("$col_name");\t')
@@ -35,30 +35,69 @@ def print_working_env(line_col_view_working, working_listview_work, view_descrip
     print('################### END VIEW ##############################')
 
 
-# def  compile_file_sql(view_on_working, path_result, line_col_view_working, working_listview_work, view_description, flag_instance,
-#                               flag_account, flag_division, file_bv, file_mv, file_psd, file_constraint):
-#     print('Compile file_materialized view')
-#     with open(path_result + file_mv, mode='a') as mod_file:
-#         mv_view_name = f'MV_{view_on_working}'
-#         list_sql_statement=[]
-#         sql_statement = create_mat_view_template.substitute(mv_view_name=view_on_working)
-#         list_sql_statement.append(sql_statement)
-#         sql_statement = alter_mat_view_template.substitute(mv_view_name=view_on_working)
-#         list_sql_statement.append(sql_statement)
-#         name_table_ind = view_on_working if len(view_on_working) < 14 else view_on_working[1:15]
-#         for row in line_col_view_working:
-#             # 30 -16 = 14 caratteri
-#             if row[]
-#             column_name_indx = row['Column Name'][1:4]
-#             name_index = f'IDX_{name_table_ind}_{column_name_indx}'
-#             create_index_template
-#             column_named[1:4]
-#         mod_file.writelines(list_sql_statement)
+
+def create_select_col(line_col_view_working, working_listview_work):
+    select_body = ['SELECT ']
+    count = 1
+    for row in working_listview_work:
+        if count == 1:
+            select_body.append('\n' + row["Column Name"])
+            count += 1
+        else:
+            # if count == line_col_view_working:
+            select_body.append('\n,' + row["Column Name"])
+            # else:
+            #     select_body.append(row["Column Name"] + '\n')
+    return select_body
+
+
+def create_sel_join_instance(flag_account, working_listview_work):
+    select_join_instance = ''
+    col_source_extracted = working_listview_work[0]
+    if flag_account == 'X':
+        join_cond = create_psd_view_instance_template.substitute(source_col=col_source_extracted['Column Name'])
+        select_join_instance = '\n' + join_cond + '\n'
+    return select_join_instance
+
+
+def create_sel_account(flag_account):
+    select_account = ''
+    if flag_account == 'X':
+        account_cond = create_psd_view_account_template.substitute()
+        select_account = account_cond + '\n'
+    return select_account
+
+
+def create_sel_division(flag_division):
+    select_division = ''
+    if flag_division == 'X':
+        division_cond = create_psd_view_division_template.substitute()
+        select_division = division_cond + '\n'
+    return select_division
+
+
+def create_list_of_comment(view_on_working, view_description, working_listview_work):
+    sql_list_comments = []
+
+    view_description_l = '\'' + view_description + '\''
+    table_comment = comment_table_template.substitute(table=view_on_working, comment_table=view_description_l)
+    sql_list_comments.append(table_comment)
+
+    for comments_col in working_listview_work:
+        comments_col_l = '\'' + comments_col['Column Description'].replace("'", "''") + '\''
+        sql_comment = comment_column_template.substitute(table=view_on_working,
+                                                         column_name=comments_col['Column Name'],
+                                                         comment_column=comments_col_l)
+        sql_list_comments.append(sql_comment)
+    return sql_list_comments
 
 
 # with open('C:\\Users\\u958garofalo\\Working\\Test_DBTOOL\\file_csv\\prova_modifiche_risultato.sql',
 #           mode='a') as mod_file:
-def read_csv_file_catalog(path_result, catalog_complete_file_name):
+def read_csv_file_catalog(file_name_complete_test_work, catalog_complete_file_name):
+    w_file = open(file_name_complete_test_work, "w", encoding="utf-8")
+    output_script = ["-- File autogenerated by script reading config file = " + catalog_complete_file_name + "\n\n"]
+
     with open(catalog_complete_file_name, mode='r') as csv_file:
         csv_reader = csv.DictReader(csv_file, delimiter=';')
         line_modified = 0
@@ -73,7 +112,7 @@ def read_csv_file_catalog(path_result, catalog_complete_file_name):
                 print(f'Column names are {", ".join(row)}')
                 line_count += 1
             if line_count == 1:
-                #The first line for each view of the catalog contains the description of the view and files, query BV, security filter
+                # The first line for each view of the catalog contains the description of the view and files, query BV, security filter
                 line_col_view_working = 0
                 view_on_working = row["View  Name"]
                 print(f'\t WORKING ON VIEW = {row["View  Name"]}')
@@ -91,9 +130,33 @@ def read_csv_file_catalog(path_result, catalog_complete_file_name):
                 # elabora
             else:
                 if view_on_working != row["View  Name"]:
+                    # Here you should elaborate the view previous read
                     print(f'\tElabora la vista {view_on_working}')
                     print_working_env(line_col_view_working, working_listview_work, view_description, flag_instance,
                                       flag_account, flag_division, file_bv, file_mv, file_psd, file_constraint)
+                    output_script.append(f'\t--Working on view {view_on_working}\n\n')
+                    select_body_col = create_select_col(line_col_view_working, working_listview_work)
+                    select_body_col_str = ''.join([str(col) for col in select_body_col])
+                    select_join_instance = create_sel_join_instance(flag_instance, working_listview_work)
+                    select_cond_account = create_sel_account(flag_account)
+                    select_cond_division = create_sel_division(flag_division)
+                    create_sql_statement = create_psd_view_template.substitute(psd_view_name=view_on_working,
+                                                                               select_body=select_body_col_str,
+                                                                               mv_view_name='<TODO>',
+                                                                               join_instance=select_join_instance,
+                                                                               cond_account=select_cond_account,
+                                                                               cond_division=select_cond_division)
+                    # comments
+                    sql_list_of_comment = create_list_of_comment(view_on_working, view_description,
+                                                                 working_listview_work)
+
+                    output_script.append(create_sql_statement)
+                    output_script.append('\n\n')
+                    for comment_str in sql_list_of_comment:
+                        output_script.append(comment_str)
+                    output_script.append('\n\n')
+                    output_script.append(f'\t--End Working on view {view_on_working}\n\n')
+                    # Next view
                     working_listview_work = []
                     line_col_view_working = 0
                     view_on_working = row["View  Name"]
@@ -109,15 +172,44 @@ def read_csv_file_catalog(path_result, catalog_complete_file_name):
                     print(
                         f'\t{view_description} : {flag_instance} : {flag_account} : {flag_division} : {file_bv} : {file_mv} : {file_psd} : {file_constraint}')
                     # elabora
-                    working_listview_work.append(row)
+                    #working_listview_work.append(row)
 
             if view_on_working == row["View  Name"]:
+                # read the configuration files each columns to process
                 line_col_view_working += 1
                 working_listview_work.append(row)
             line_count += 1
         print(f'\tElabora la vista {view_on_working}')
         print_working_env(line_col_view_working, working_listview_work, view_description, flag_instance,
                           flag_account, flag_division, file_bv, file_mv, file_psd, file_constraint)
+        # Here you should elaborate the view previous read
+        print(f'\tElabora la vista {view_on_working}')
+        print_working_env(line_col_view_working, working_listview_work, view_description, flag_instance,
+                          flag_account, flag_division, file_bv, file_mv, file_psd, file_constraint)
+        output_script.append(f'\t--Working on view {view_on_working}\n\n')
+        select_body_col = create_select_col(line_col_view_working, working_listview_work)
+        select_body_col_str = ''.join([str(col) for col in select_body_col])
+        select_join_instance = create_sel_join_instance(flag_instance, working_listview_work)
+        select_cond_account = create_sel_account(flag_account)
+        select_cond_division = create_sel_division(flag_division)
+        create_sql_statement = create_psd_view_template.substitute(psd_view_name=view_on_working,
+                                                                   select_body=select_body_col_str,
+                                                                   mv_view_name='<TODO>',
+                                                                   join_instance=select_join_instance,
+                                                                   cond_account=select_cond_account,
+                                                                   cond_division=select_cond_division)
+        # comments
+        sql_list_of_comment = create_list_of_comment(view_on_working, view_description,
+                                                     working_listview_work)
+
+        output_script.append(create_sql_statement)
+        output_script.append('\n\n')
+        for comment_str in sql_list_of_comment:
+            output_script.append(comment_str)
+        output_script.append('\n\n')
+        output_script.append(f'\t--End Working on view {view_on_working}\n\n')
+        w_file.writelines(output_script)
+        w_file.close()
 
         # compile_file_sql(view_on_working, path_result, line_col_view_working, working_listview_work, view_description, flag_instance,
         #                       flag_account, flag_division, file_bv, file_mv, file_psd, file_constraint)
@@ -200,11 +292,12 @@ if __name__ == '__main__':
     # file name temporaneo di lavoro
     path_name_catalog = args.catalog_path
     file_name_catalog = args.catalog_file
+    file_name_test_final = file_name_catalog[:-4] + '.sql'
     path_repository_csv = repository_dir + path_name_catalog
     file_name_complete_catalog = path_repository_csv + '\\' + file_name_catalog
-    file_name_complete_test_work = repository_work_dir + '\\'  # + file_name_test_final
+    file_name_complete_test_work = repository_work_dir + '\\' + file_name_test_final
 
     dir_branch_complete = base_dir + '\\' + update_dir
     file_name_complete_target = dir_branch_complete + '\\'  # + file_name_target_final
 
-    read_csv_file_catalog(working_dir, file_name_complete_catalog)
+    read_csv_file_catalog(file_name_complete_test_work, file_name_complete_catalog)
