@@ -14,7 +14,7 @@ create_psd_view_division_template = Template(
     '\tAND (FX_DIVISION_OID IS NULL OR (INSTR(FX_DIVISION_OID,''|'' || PROJECT_DIVISION || ''|'') > 0))')
 
 create_psd_view_template = Template(
-    'CREATE OR REPLACE VIEW "&&__BIZUSER."."$psd_view_name" AS $select_body \t\nFROM\t $mv_view_name $join_instance WHERE $cond_account $cond_division;\t')
+    'CREATE OR REPLACE VIEW "&&__BIZUSER."."$psd_view_name" AS $select_body \t\nFROM\t $mv_view_name $cross_join $join_instance WHERE $cond_account $cond_division;\t')
 create_mat_view_template = Template(
     'CREATE MATERIALIZED VIEW "&&__BIZUSER."."$mv_view_name" BUILD DEFERRED AS\tSELECT * FROM "&&__BIZUSER."."$bv_view_name"&&__OLTP_DBLINK.;\t')
 alter_mat_view_template = Template('ALTER MATERIALIZED VIEW "&&__BIZUSER."."$mv_view_name" COMPILE;')
@@ -23,7 +23,11 @@ create_index_template = Template(
 create_pk_psd_view_template = Template(
     'ALTER VIEW CAT_STRATEGY_ADDITIONAL_INFO ADD CONSTRAINT PK_$name_psd_view PRIMARY KEY ($list_column) RELY DISABLE NOVALIDATE;')
 
+create_col_timestamp_tz = Template('FROM_TZ(CAST($col_name AS TIMESTAMP),(CF.SCHEMA_TZ)) AS $col_name')
+create_cross_join_for_time_tz = Template('CROSS JOIN &&__BIZUSER..MV_CONFIG CF')
 
+
+# IF columtype = TIMESTAMP WITH TIME ZONE THEN column -> FROM_TZ(<column_name> ,(CF.SCHEMA_TZ)) AS <columns_name> AND add CROSS JOIN &&__BIZUSER..MV_CONFIG CF
 #
 def print_working_env(line_col_view_working, working_listview_work, view_description, flag_instance, flag_account,
                       flag_division, file_bv, file_mv, file_psd, file_constraint):
@@ -35,20 +39,21 @@ def print_working_env(line_col_view_working, working_listview_work, view_descrip
     print('################### END VIEW ##############################')
 
 
-
 def create_select_col(line_col_view_working, working_listview_work):
-    select_body = ['SELECT ']
+    select_body = ['\nSELECT /*### PSD ###*/ ']
     count = 1
+    there_is_timestp_tz = False
     for row in working_listview_work:
+        col_name_l = row["Column Name"]
+        if row["Column Type"] == 'TIMESTAMP WITH TIME ZONE':
+            col_name_l = create_col_timestamp_tz.substitute(col_name=col_name_l)
+            there_is_timestp_tz = True
         if count == 1:
-            select_body.append('\n' + row["Column Name"])
+            select_body.append('\n' + col_name_l)
             count += 1
         else:
-            # if count == line_col_view_working:
-            select_body.append('\n,' + row["Column Name"])
-            # else:
-            #     select_body.append(row["Column Name"] + '\n')
-    return select_body
+            select_body.append('\n,' + col_name_l)
+    return select_body, there_is_timestp_tz
 
 
 def create_sel_join_instance(flag_account, working_listview_work):
@@ -135,7 +140,12 @@ def read_csv_file_catalog(file_name_complete_test_work, catalog_complete_file_na
                     print_working_env(line_col_view_working, working_listview_work, view_description, flag_instance,
                                       flag_account, flag_division, file_bv, file_mv, file_psd, file_constraint)
                     output_script.append(f'\t--Working on view {view_on_working}\n\n')
-                    select_body_col = create_select_col(line_col_view_working, working_listview_work)
+                    select_body_col, there_is_timestp_tz = create_select_col(line_col_view_working, working_listview_work)
+                    if there_is_timestp_tz:
+                        select_cross_join = create_cross_join_for_time_tz.substitute()
+                        select_cross_join = '\n\t' + select_cross_join
+                    else:
+                        select_cross_join =''
                     select_body_col_str = ''.join([str(col) for col in select_body_col])
                     select_join_instance = create_sel_join_instance(flag_instance, working_listview_work)
                     select_cond_account = create_sel_account(flag_account)
@@ -143,6 +153,7 @@ def read_csv_file_catalog(file_name_complete_test_work, catalog_complete_file_na
                     create_sql_statement = create_psd_view_template.substitute(psd_view_name=view_on_working,
                                                                                select_body=select_body_col_str,
                                                                                mv_view_name='<TODO>',
+                                                                               cross_join=select_cross_join,
                                                                                join_instance=select_join_instance,
                                                                                cond_account=select_cond_account,
                                                                                cond_division=select_cond_division)
@@ -172,7 +183,7 @@ def read_csv_file_catalog(file_name_complete_test_work, catalog_complete_file_na
                     print(
                         f'\t{view_description} : {flag_instance} : {flag_account} : {flag_division} : {file_bv} : {file_mv} : {file_psd} : {file_constraint}')
                     # elabora
-                    #working_listview_work.append(row)
+                    # working_listview_work.append(row)
 
             if view_on_working == row["View  Name"]:
                 # read the configuration files each columns to process
@@ -187,7 +198,12 @@ def read_csv_file_catalog(file_name_complete_test_work, catalog_complete_file_na
         print_working_env(line_col_view_working, working_listview_work, view_description, flag_instance,
                           flag_account, flag_division, file_bv, file_mv, file_psd, file_constraint)
         output_script.append(f'\t--Working on view {view_on_working}\n\n')
-        select_body_col = create_select_col(line_col_view_working, working_listview_work)
+        select_body_col, there_is_timestp_tz = create_select_col(line_col_view_working, working_listview_work)
+        if there_is_timestp_tz:
+            select_cross_join = create_cross_join_for_time_tz.substitute()
+            select_cross_join = '\n\t' + select_cross_join
+        else:
+            select_cross_join = ''
         select_body_col_str = ''.join([str(col) for col in select_body_col])
         select_join_instance = create_sel_join_instance(flag_instance, working_listview_work)
         select_cond_account = create_sel_account(flag_account)
@@ -195,6 +211,7 @@ def read_csv_file_catalog(file_name_complete_test_work, catalog_complete_file_na
         create_sql_statement = create_psd_view_template.substitute(psd_view_name=view_on_working,
                                                                    select_body=select_body_col_str,
                                                                    mv_view_name='<TODO>',
+                                                                   cross_join=select_cross_join,
                                                                    join_instance=select_join_instance,
                                                                    cond_account=select_cond_account,
                                                                    cond_division=select_cond_division)
@@ -210,32 +227,6 @@ def read_csv_file_catalog(file_name_complete_test_work, catalog_complete_file_na
         output_script.append(f'\t--End Working on view {view_on_working}\n\n')
         w_file.writelines(output_script)
         w_file.close()
-
-        # compile_file_sql(view_on_working, path_result, line_col_view_working, working_listview_work, view_description, flag_instance,
-        #                       flag_account, flag_division, file_bv, file_mv, file_psd, file_constraint)
-
-        # print(
-        #     f'\t{row["View  Name"]} on the column name  {row["Column Name"]} column type  {row["Column Type"]} colum descriiption  {row["Column Description"]} indici {row["Indici"]}')
-
-        #     if row["Notes"] == 'Change column description':
-        #         if line_count == 1:
-        #             header_modification = f'\n\n#################  VISTA MODIFICATA {row["View"]} ###############################'
-        #             first_view = row["View"]
-        #             mod_file.writelines(header_modification)
-        #         else:
-        #             if first_view != row["View"]:
-        #                 header_modification = f'\n\n#################  VISTA MODIFICATA {row["View"]} ###############################'
-        #                 first_view = row["View"]
-        #                 mod_file.writelines(header_modification)
-        #
-        #         #comment_str = "'" if not row["Column description"].startswith("'") else row["Column description"] + "'" if not row["Column description"].endswith("'") else row["Column description"]
-        #         change_statement = f'\nCOMMENT ON COLUMN "&&__BIZUSER."."{row["View"]}"."{row["Column"]}" IS "{row["Column description"]}";'
-        #         #print(change_statement)
-        #         mod_file.writelines(change_statement)
-        #         line_modified += 1
-        #     line_count += 1
-        # print(f'Processed {line_count} lines.')
-        # print(f'Modified  {line_modified} lines.')
 
 
 def help_msg():
