@@ -1,5 +1,6 @@
 import argparse
 import csv
+import logging
 from string import Template
 
 # Template common SQL statement
@@ -32,12 +33,26 @@ create_cast_decode = Template('CAST(DECODE ($col_name\n $list_decoded_value\n ) 
 #
 def print_working_env(line_col_view_working, working_listview_work, view_description, flag_instance, flag_account,
                       flag_division, file_bv, file_mv, file_psd, file_constraint):
-    print('################### VIEW ##############################')
-    print(
+    logger.info('################### VIEW ##############################')
+    logger.info(
         f'\t\t{view_description} : {flag_instance} : {flag_account} : {flag_division} : {file_bv} : {file_mv} : {file_psd} : {file_constraint}')
-    print(f'\t\t Linee estratte = {line_col_view_working} ')
-    print(*working_listview_work, sep="\n")
-    print('################### END VIEW ##############################')
+    logger.info(f'\t\t Linee estratte = {line_col_view_working} ')
+    logger.info('\n'.join(map(str, working_listview_work)))
+    # stampa di una lista senza loop print(*working_listview_work, sep="\n")
+    logger.info('################### END VIEW ##############################')
+
+
+def create_col_decoded(col_name_l, col_descr_decode, col_type):
+    list_decoded_values = dict(
+    item.split("=") for item in [item for item in col_descr_decode.split("\n") if 'Decoded' not in item])
+    inv_map = dict(map(reversed, list_decoded_values.items()))
+    list_decoded_values = ','.join(key + ' , ' + '\'' + value + '\'' + '\n' for key, value in inv_map.items())
+    #Add the CHAR unit length
+    if 'VARCHAR2' in col_type:
+        col_type = ' CHAR)'.join(code_type.replace(' ','') for code_type in col_type.split(')'))
+    decode = create_cast_decode.substitute(col_name=col_name_l, list_decoded_value=list_decoded_values[:-1],
+                                           data_type=col_type)
+    return decode
 
 
 def create_select_col(line_col_view_working, working_listview_work):
@@ -46,6 +61,8 @@ def create_select_col(line_col_view_working, working_listview_work):
     there_is_timestp_tz = False
     for row in working_listview_work:
         col_name_l = row["Column Name"]
+        if 'Decoded' in row["Column Description"]:
+            col_name_l = create_col_decoded(col_name_l, row["Column Description"], row["Column Type"])
         if row["Column Type"] == 'TIMESTAMP WITH TIME ZONE':
             col_name_l = create_col_timestamp_tz.substitute(col_name=col_name_l)
             there_is_timestp_tz = True
@@ -147,13 +164,13 @@ def read_csv_file_catalog(file_name_complete_test_work, catalog_complete_file_na
 
             if line_count == 0:
                 # Print description of the structure of Catalog
-                print(f'Column names are {", ".join(row)}')
+                logger.debug(f'Column names are {", ".join(row)}')
                 line_count += 1
             if line_count == 1:
                 # The first line for each view of the catalog contains the description of the view and files, query BV, security filter
                 line_col_view_working = 0
                 view_on_working = row["View  Name"]
-                print(f'\t WORKING ON VIEW = {row["View  Name"]}')
+                logger.debug(f'\t WORKING ON VIEW = {row["View  Name"]}')
                 view_description = row["View Description"]
                 flag_instance = row["INSTANCE"]
                 flag_account = row["ACCOUNT"]
@@ -162,14 +179,14 @@ def read_csv_file_catalog(file_name_complete_test_work, catalog_complete_file_na
                 file_mv = row["FILE_MV"]
                 file_psd = row["FILE_PSD"]
                 file_constraint = row["FILE_CONSTRAINT"]
-                print(
+                logger.debug(
                     f'\t{view_description} : {flag_instance} : {flag_account} : {flag_division} : {file_bv} : {file_mv} : {file_psd} : {file_constraint}')
                 # working_listview_work.append(row)
                 # elabora
             else:
                 if view_on_working != row["View  Name"]:
                     # Here you should elaborate the view previous read
-                    print(f'\tElabora la vista {view_on_working}')
+                    logger.info(f'\tWorking on view = {view_on_working}')
                     print_working_env(line_col_view_working, working_listview_work, view_description, flag_instance,
                                       flag_account, flag_division, file_bv, file_mv, file_psd, file_constraint)
                     create_sql_template_PSD_file(output_script, view_on_working, line_col_view_working,
@@ -217,7 +234,7 @@ def help_msg():
 
 
 if __name__ == '__main__':
-    print('Partenza')
+    print('Start script')
 
     parser = argparse.ArgumentParser(description=help_msg())
     parser.add_argument('-d', '--directory_svn',
@@ -260,6 +277,11 @@ if __name__ == '__main__':
 
     log_file = 'log_file_for_PSD_GENERATION' + version_branch + '.log'
     log_file_complete = args.log_dir + '\\' + log_file
+
+    FORMAT = '%(asctime)s %(message)s'
+    logging.basicConfig(level=logging.DEBUG, format=FORMAT, encoding='utf-8',
+                        handlers=[logging.FileHandler(log_file_complete), logging.StreamHandler()])
+    logger = logging.getLogger('exec_psd_CATALOG_log')
 
     update_dir = '\\database\\branches\\' + version_branch + '\\sql\\master\dmr\psd\\'
     repository_work_dir = args.repository_dir + working_dir
