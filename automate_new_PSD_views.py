@@ -25,6 +25,7 @@ create_pk_psd_view_template = Template(
 
 create_col_timestamp_tz = Template('FROM_TZ(CAST($col_name AS TIMESTAMP),(CF.SCHEMA_TZ)) AS $col_name')
 create_cross_join_for_time_tz = Template('CROSS JOIN &&__BIZUSER..MV_CONFIG CF')
+create_cast_decode = Template('CAST(DECODE ($col_name\n $list_decoded_value\n ) AS $data_type ) AS $col_name')
 
 
 # IF columtype = TIMESTAMP WITH TIME ZONE THEN column -> FROM_TZ(<column_name> ,(CF.SCHEMA_TZ)) AS <columns_name> AND add CROSS JOIN &&__BIZUSER..MV_CONFIG CF
@@ -97,6 +98,38 @@ def create_list_of_comment(view_on_working, view_description, working_listview_w
     return sql_list_comments
 
 
+def create_sql_template_PSD_file(output_script, view_on_working, line_col_view_working, working_listview_work,
+                                 flag_instance, flag_account, flag_division, view_description):
+    output_script.append(f'\t--Working on view {view_on_working}\n\n')
+    select_body_col, there_is_timestp_tz = create_select_col(line_col_view_working, working_listview_work)
+    if there_is_timestp_tz:
+        select_cross_join = create_cross_join_for_time_tz.substitute()
+        select_cross_join = '\n\t' + select_cross_join
+    else:
+        select_cross_join = ''
+    select_body_col_str = ''.join([str(col) for col in select_body_col])
+    select_join_instance = create_sel_join_instance(flag_instance, working_listview_work)
+    select_cond_account = create_sel_account(flag_account)
+    select_cond_division = create_sel_division(flag_division)
+    create_sql_statement = create_psd_view_template.substitute(psd_view_name=view_on_working,
+                                                               select_body=select_body_col_str,
+                                                               mv_view_name='<TODO>',
+                                                               cross_join=select_cross_join,
+                                                               join_instance=select_join_instance,
+                                                               cond_account=select_cond_account,
+                                                               cond_division=select_cond_division)
+    # comments
+    sql_list_of_comment = create_list_of_comment(view_on_working, view_description,
+                                                 working_listview_work)
+
+    output_script.append(create_sql_statement)
+    output_script.append('\n\n')
+    for comment_str in sql_list_of_comment:
+        output_script.append(comment_str)
+    output_script.append('\n\n')
+    output_script.append(f'\t--End Working on view {view_on_working}\n\n')
+
+
 # with open('C:\\Users\\u958garofalo\\Working\\Test_DBTOOL\\file_csv\\prova_modifiche_risultato.sql',
 #           mode='a') as mod_file:
 def read_csv_file_catalog(file_name_complete_test_work, catalog_complete_file_name):
@@ -139,34 +172,9 @@ def read_csv_file_catalog(file_name_complete_test_work, catalog_complete_file_na
                     print(f'\tElabora la vista {view_on_working}')
                     print_working_env(line_col_view_working, working_listview_work, view_description, flag_instance,
                                       flag_account, flag_division, file_bv, file_mv, file_psd, file_constraint)
-                    output_script.append(f'\t--Working on view {view_on_working}\n\n')
-                    select_body_col, there_is_timestp_tz = create_select_col(line_col_view_working, working_listview_work)
-                    if there_is_timestp_tz:
-                        select_cross_join = create_cross_join_for_time_tz.substitute()
-                        select_cross_join = '\n\t' + select_cross_join
-                    else:
-                        select_cross_join =''
-                    select_body_col_str = ''.join([str(col) for col in select_body_col])
-                    select_join_instance = create_sel_join_instance(flag_instance, working_listview_work)
-                    select_cond_account = create_sel_account(flag_account)
-                    select_cond_division = create_sel_division(flag_division)
-                    create_sql_statement = create_psd_view_template.substitute(psd_view_name=view_on_working,
-                                                                               select_body=select_body_col_str,
-                                                                               mv_view_name='<TODO>',
-                                                                               cross_join=select_cross_join,
-                                                                               join_instance=select_join_instance,
-                                                                               cond_account=select_cond_account,
-                                                                               cond_division=select_cond_division)
-                    # comments
-                    sql_list_of_comment = create_list_of_comment(view_on_working, view_description,
-                                                                 working_listview_work)
-
-                    output_script.append(create_sql_statement)
-                    output_script.append('\n\n')
-                    for comment_str in sql_list_of_comment:
-                        output_script.append(comment_str)
-                    output_script.append('\n\n')
-                    output_script.append(f'\t--End Working on view {view_on_working}\n\n')
+                    create_sql_template_PSD_file(output_script, view_on_working, line_col_view_working,
+                                                 working_listview_work,
+                                                 flag_instance, flag_account, flag_division, view_description)
                     # Next view
                     working_listview_work = []
                     line_col_view_working = 0
@@ -197,34 +205,9 @@ def read_csv_file_catalog(file_name_complete_test_work, catalog_complete_file_na
         print(f'\tElabora la vista {view_on_working}')
         print_working_env(line_col_view_working, working_listview_work, view_description, flag_instance,
                           flag_account, flag_division, file_bv, file_mv, file_psd, file_constraint)
-        output_script.append(f'\t--Working on view {view_on_working}\n\n')
-        select_body_col, there_is_timestp_tz = create_select_col(line_col_view_working, working_listview_work)
-        if there_is_timestp_tz:
-            select_cross_join = create_cross_join_for_time_tz.substitute()
-            select_cross_join = '\n\t' + select_cross_join
-        else:
-            select_cross_join = ''
-        select_body_col_str = ''.join([str(col) for col in select_body_col])
-        select_join_instance = create_sel_join_instance(flag_instance, working_listview_work)
-        select_cond_account = create_sel_account(flag_account)
-        select_cond_division = create_sel_division(flag_division)
-        create_sql_statement = create_psd_view_template.substitute(psd_view_name=view_on_working,
-                                                                   select_body=select_body_col_str,
-                                                                   mv_view_name='<TODO>',
-                                                                   cross_join=select_cross_join,
-                                                                   join_instance=select_join_instance,
-                                                                   cond_account=select_cond_account,
-                                                                   cond_division=select_cond_division)
-        # comments
-        sql_list_of_comment = create_list_of_comment(view_on_working, view_description,
-                                                     working_listview_work)
-
-        output_script.append(create_sql_statement)
-        output_script.append('\n\n')
-        for comment_str in sql_list_of_comment:
-            output_script.append(comment_str)
-        output_script.append('\n\n')
-        output_script.append(f'\t--End Working on view {view_on_working}\n\n')
+        create_sql_template_PSD_file(output_script, view_on_working, line_col_view_working,
+                                     working_listview_work,
+                                     flag_instance, flag_account, flag_division, view_description)
         w_file.writelines(output_script)
         w_file.close()
 
