@@ -18,6 +18,7 @@ file_name_test_final = '07-mv_view-dpl_biz_TEST.sql'
 
 # check_count_psd_view_template = Template(
 #     'SELECT count(*) FROM $dpl_view UNION ALL SELECT count(*) FROM $psd_view ;\n')
+# SQL to perform the test file to check the counting of original PSD view and Data Pipeline view
 check_count_psd_view_template = Template(
     'select CASE WHEN (N_T.NUM_N < O_T.NUM or (N_T.NUM_N = 0 and O_T.NUM <>0)) THEN \'KO\' ELSE \'OK\' END CHECK_STATUS, N_T.NAME_VIEW_N, O_T.NAME_VIEW from (SELECT count(*) AS NUM_N, \'$dpl_view\'  as NAME_VIEW_N  FROM $dpl_view N) N_T,(SELECT count(*) AS NUM,  \'$psd_view\' as NAME_VIEW  FROM $psd_view O) O_T;\n')
 
