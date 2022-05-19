@@ -133,14 +133,14 @@ def compile_PSD_pipeline_working(file_name_complete_working, file_name_complete_
         # the psd with the generic PSD view has to be excluded by analysis
         file_name = os.path.basename(file_PSD_to_read)
         if file_name.find('06-psd_view-0_biz.sql') == -1:
-            a_file = open(file_PSD_to_read, "r", encoding="utf-8")
-            logger.info("Processing file " + file_name)
-            list_of_lines = a_file.readlines()
-            a_file.close()
-            # extract new version
-            list_of_lines_mod, test_line_script = create_new_PipelinePSD(list_of_lines, file_name)
-            w_file.writelines(list_of_lines_mod)
-            w_file_test.writelines(test_line_script)
+           a_file = open(file_PSD_to_read, "r", encoding="utf-8")
+           logger.info("Processing file " + file_name)
+           list_of_lines = a_file.readlines()
+           a_file.close()
+           # extract new version
+           list_of_lines_mod, test_line_script = create_new_PipelinePSD(list_of_lines, file_name)
+           w_file.writelines(list_of_lines_mod)
+           w_file_test.writelines(test_line_script)
     w_file.close()
     w_file_test.close()
     if not autogenerate_flag_only:
