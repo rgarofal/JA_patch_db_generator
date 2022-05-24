@@ -26,7 +26,7 @@ create_pk_psd_view_template = Template(
 
 create_col_timestamp_tz = Template('FROM_TZ(CAST($col_name AS TIMESTAMP),(CF.SCHEMA_TZ)) AS $col_name')
 create_cross_join_for_time_tz = Template('CROSS JOIN &&__BIZUSER..MV_CONFIG CF')
-create_cast_decode = Template('CAST(DECODE ($col_name\n $list_decoded_value\n ) AS $data_type ) AS $col_name')
+create_cast_decode = Template('CAST(DECODE ($col_name\n,$list_decoded_value\n ) AS $data_type ) AS $col_name')
 
 
 # IF columtype = TIMESTAMP WITH TIME ZONE THEN column -> FROM_TZ(<column_name> ,(CF.SCHEMA_TZ)) AS <columns_name> AND add CROSS JOIN &&__BIZUSER..MV_CONFIG CF
