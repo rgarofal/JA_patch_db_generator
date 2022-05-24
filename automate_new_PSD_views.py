@@ -9,10 +9,10 @@ comment_column_template = Template('COMMENT ON COLUMN "&&__BIZUSER."."$table"."$
 create_psd_view_instance_template = Template('\tJOIN FX on ($source_col = FX_SOURCE_ID)\t')
 # ATTENZIONE per l'ACCOUNT aggiungere la colonna alla BV =>  CTM_STRATEGY.ACCOUNT_ID                   AS BUYER_ORGANIZATION_ID
 create_psd_view_account_template = Template(
-    '\t(FX_ACCOUNT_ID IS NULL OR FX_ACCOUNT_ID = BUYER_ORGANIZATION_ID)\tAND (FX_ACCOUNT_ID_LIST IS NULL OR (INSTR(FX_ACCOUNT_ID_LIST,''|'' || BUYER_ORGANIZATION_ID || ''|'') > 0))''')
+    '\t(FX_ACCOUNT_ID IS NULL OR FX_ACCOUNT_ID = BUYER_ORGANIZATION_ID)\tAND (FX_ACCOUNT_ID_LIST IS NULL OR (INSTR(FX_ACCOUNT_ID_LIST, \'|\' || BUYER_ORGANIZATION_ID || \'|\') > 0))''')
 # ATTENZIONE per la DIVISION aggiungere la colonna DIVISION_OID
 create_psd_view_division_template = Template(
-    '\tAND (FX_DIVISION_OID IS NULL OR (INSTR(FX_DIVISION_OID,''|'' || PROJECT_DIVISION || ''|'') > 0))')
+    '\tAND (FX_DIVISION_OID IS NULL OR (INSTR(FX_DIVISION_OID, \'|\' || DIVISION_ID || \'|\') > 0))')
 
 create_psd_view_template = Template(
     'CREATE OR REPLACE VIEW "&&__BIZUSER."."$psd_view_name" AS $select_body \t\nFROM\t $mv_view_name $cross_join $join_instance WHERE $cond_account $cond_division;\t')
@@ -63,7 +63,7 @@ def create_select_col(line_col_view_working, working_listview_work):
         col_name_l = row["Column Name"]
         if 'Decoded' in row["Column Description"]:
             col_name_l = create_col_decoded(col_name_l, row["Column Description"], row["Column Type"])
-        if row["Column Type"] == 'TIMESTAMP WITH TIME ZONE':
+        if row["Column Type"] == 'TIMESTAMP WITH TIMEZONE':
             col_name_l = create_col_timestamp_tz.substitute(col_name=col_name_l)
             there_is_timestp_tz = True
         if count == 1:
