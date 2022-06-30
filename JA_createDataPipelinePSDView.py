@@ -209,6 +209,10 @@ if __name__ == '__main__':
                         default=False,
                         help='if True the script generate only the script working target and the TEST script',
                         required=False)
+    parser.add_argument('-psd', '--psd_directory',
+                        default='\\sql\\master\dmr\psd\\',
+                        help='directory where the psd view are located',
+                        required=True)
     # LOG features
     parser.add_argument('-l', '--log_dir',
                         default='C:\\Users\\u958garofalo\\Working\\LOG_PSD_DP',
@@ -222,7 +226,9 @@ if __name__ == '__main__':
     log_file = 'log_file_for_PSD_PIPELINE' + version_branch + '.log'
     log_file_complete = args.log_dir + '\\' + log_file
     base_name_file_PSD = header_file
-    update_dir = '\\database\\branches\\' + version_branch + '\\sql\\master\dmr\psd\\'
+    dir_psd = args.psd_directory
+    #update_dir = '\\database\\branches\\' + version_branch + '\\sql\\master\dmr\psd\\'
+    update_dir = '\\database\\branches\\' + version_branch + dir_psd
     repository_work_dir = args.repository_dir + working_dir
     # file name temporary of work
     file_name_complete_working = repository_work_dir + '\\' + file_name_target
