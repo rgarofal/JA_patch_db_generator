@@ -212,7 +212,7 @@ if __name__ == '__main__':
     parser.add_argument('-psd', '--psd_directory',
                         default='\\sql\\master\dmr\psd\\',
                         help='directory where the psd view are located',
-                        required=True)
+                        required=False)
     # LOG features
     parser.add_argument('-l', '--log_dir',
                         default='C:\\Users\\u958garofalo\\Working\\LOG_PSD_DP',
